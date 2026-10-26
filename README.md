@@ -12,7 +12,7 @@
 [![catalog](https://img.shields.io/badge/models-132%20out%20of%20the%20box-8A2BE2)](#能评测哪些模型)
 [![license](https://img.shields.io/badge/license-MIT%20%2B%20CC--BY--4.0-orange)](#许可)
 
-[中文](#中文) · [English](#english) · [X / Twitter](https://x.com/0xkillcoin)
+[中文](#中文) · [English](#english) · [在线介绍页](https://iiiiiiiiiiiiikk.github.io/model-intelligence-lab/) · [X / Twitter](https://x.com/0xkillcoin)
 
 </div>
 
@@ -347,7 +347,7 @@ NODE_ENV=production PORT=8080 npm start
 | VPS / 自建 VM | ✅ 最佳 | 需要持久磁盘 + 常驻 worker |
 | Docker | ✅ | 挂载 `/app/data` 卷 |
 | Fly.io / Railway / Render | ✅ | 需要持久卷；必须单实例 |
-| **GitHub Pages** | ❌ | 纯静态托管，没有后端、没有 SQLite、没有后台任务 |
+| **GitHub Pages** | ❌ 应用跑不了<br>✅ 介绍页可以 | 纯静态托管，没有后端、没有 SQLite、没有后台任务。仓库已在该平台发布一个静态介绍页：[iiiiiiiiiiiiikk.github.io/model-intelligence-lab](https://iiiiiiiiiiiiikk.github.io/model-intelligence-lab/) |
 | Vercel / Netlify Functions | ⚠️ 需改造 | 文件系统是临时的，没有常驻 worker；要换成 Postgres + 外部队列 |
 | Cloudflare Workers | ❌ | 没有 `node:sqlite`，也没有长生命周期进程 |
 
@@ -373,7 +373,8 @@ NODE_ENV=production PORT=8080 npm start
 | 生产模式自托管 | ✅ 已验证 | 全新数据库：SPA 根 200、深链 200、哈希资源 200、未知 API 404、开箱 132 模型 |
 | Git 仓库 | ✅ 完成 | 分支 `main`，工作区干净 |
 | 公开 GitHub 仓库 | ✅ 完成 | 本仓库 |
-| **GitHub Pages 部署** | ❌ 不适用 | 应用需要 Node 服务端 + SQLite + 常驻 worker，静态托管无法承载 |
+| 静态介绍页（GitHub Pages） | ✅ 已上线 | <https://iiiiiiiiiiiiikk.github.io/model-intelligence-lab/> · 页面首屏明确说明它不是应用本身 |
+| **应用本体的线上部署** | ⛔ 受阻 | 应用需要 Node 服务端 + SQLite + 常驻 worker，静态托管无法承载；又没有可用的云主机凭据 |
 | **在线 Demo** | ⛔ 受阻 | 无可用托管凭据（Cloudflare token 校验失败、无 Vercel token）。所以这里**没有**演示地址，因为确实不存在 |
 | **真实厂商 API 调用** | ⛔ 未验证 | 环境里没有任何厂商 API Key。引擎链路已用真实 HTTP 供应商验证过，但没调用过付费接口。加个 key 后第一次评测就是真实调用 |
 
@@ -458,7 +459,7 @@ NODE_ENV=production PORT=8080 npm start
 
 The whole database is one SQLite file at `data/model-lab.db`. Needs a persistent volume and exactly one instance.
 
-**GitHub Pages cannot host this** — it is a static host, and the app needs a Node server, SQLite and a long-lived background worker. Vercel/Netlify functions would need Postgres plus an external queue; Cloudflare Workers have no `node:sqlite`. A VPS, Docker, Fly.io, Railway or Render all work.
+**GitHub Pages cannot host the app** — it is a static host, and the app needs a Node server, SQLite and a long-lived background worker. What Pages *does* host is a static intro page: <https://iiiiiiiiiiiiikk.github.io/model-intelligence-lab/>. Vercel/Netlify functions would need Postgres plus an external queue; Cloudflare Workers have no `node:sqlite`. A VPS, Docker, Fly.io, Railway or Render all work.
 
 ### Project status
 
