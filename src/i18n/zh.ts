@@ -331,6 +331,19 @@ export const zh = {
   'conclusion.insufficient-data': '数据不足',
   'conclusion.execution-failed': '执行失败',
 
+  // auth
+  'auth.title': '需要访问令牌',
+  'auth.intro': '这个实例设置了访问令牌。它是单租户自托管部署，谁能进来谁就能读写全部数据和已加密的服务商密钥，所以要先把门关上。',
+  'auth.tokenLabel': '访问令牌',
+  'auth.tokenPlaceholder': '粘贴部署时设置的 MODEL_LAB_ACCESS_TOKEN',
+  'auth.signIn': '进入',
+  'auth.signingIn': '正在验证…',
+  'auth.signOut': '退出登录',
+  'auth.wrongToken': '令牌不正确。',
+  'auth.required': '需要一个有效的访问令牌才能继续。',
+  'auth.cannotReach': '无法连接后端',
+  'auth.hint': '令牌在校验时只做恒定时间比较，不会写入日志。登录状态存在一个带签名的 Cookie 里，重启服务不会让你退出。',
+
   // benchmarks
   'benchmarks.title': '测试题库',
   'benchmarks.subtitle': '题集、版本、评分规则与来源授权。',

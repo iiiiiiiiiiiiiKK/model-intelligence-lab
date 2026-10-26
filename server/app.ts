@@ -28,6 +28,8 @@ import { communityRouter } from './routes/community';
 import { compareRouter } from './routes/compare';
 import { providersRouter } from './routes/providers';
 import { catalogRouter } from './routes/catalog';
+import { authRouter } from './routes/auth';
+import { assertSafeExposure, authRequired, requireSession } from './auth';
 import { APP_VERSION } from '../shared/constants';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -75,6 +77,14 @@ app.use('/api', (req, res, next) => {
 });
 
 // ---------------------------------------------------------------------------
+// access control
+// ---------------------------------------------------------------------------
+//
+// Mounted before every data route. When MODEL_LAB_ACCESS_TOKEN is unset the gate
+// is a no-op, so the default single-machine setup keeps working unchanged.
+app.use('/api', requireSession);
+
+// ---------------------------------------------------------------------------
 // health
 // ---------------------------------------------------------------------------
 
@@ -113,6 +123,8 @@ app.get('/api/health', (_req: Request, res: Response) => {
     version: APP_VERSION,
     uptimeSeconds: Math.round(process.uptime()),
     demoDataPresent,
+    // The client shows a lock indicator when the instance is gated.
+    authRequired: authRequired(),
     databasePath: env.NODE_ENV === 'production' ? undefined : dbFilePath,
   });
 });
@@ -188,6 +200,7 @@ app.get('/api/overview', (_req: Request, res: Response) => {
 // routes
 // ---------------------------------------------------------------------------
 
+app.use('/api', authRouter);
 app.use('/api', modelsRouter);
 app.use('/api', benchmarksRouter);
 app.use('/api', evaluationsRouter);
@@ -252,6 +265,8 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
  * Kept separate from `index.ts` so tests can mount `app` without listening.
  */
 export function bootstrap(): { resumedRuns: number; syncedProviders: number } {
+  // Fail fast rather than serve credentials and a spending path to the internet.
+  assertSafeExposure();
   migrate();
   seedRegistry();
   ensureUserSettings();

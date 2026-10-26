@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { I18nProvider } from './i18n';
+import AuthGate from './components/AuthGate';
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 import ModelsPage from './pages/ModelsPage';
@@ -24,6 +25,7 @@ if (!root) throw new Error('Root element #root was not found in index.html');
 createRoot(root).render(
   <StrictMode>
     <I18nProvider>
+      <AuthGate>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route element={<Layout />}>
@@ -43,6 +45,7 @@ createRoot(root).render(
           </Route>
         </Routes>
       </BrowserRouter>
+      </AuthGate>
     </I18nProvider>
   </StrictMode>,
 );

@@ -1,0 +1,39 @@
+# Render blueprint.
+#
+#   Render Dashboard → New → Blueprint → point at this repository.
+#
+# Requirements this file encodes, and why:
+#   - A persistent disk: the whole database is one SQLite file, and an ephemeral
+#     filesystem would silently wipe it on every deploy.
+#   - Exactly one instance: the evaluation worker runs in-process and there is a
+#     single writer.
+
+services:
+  - type: web
+    name: model-intelligence-lab
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    region: singapore
+    numInstances: 1
+    healthCheckPath: /api/health
+    autoDeploy: true
+    disk:
+      name: model-lab-data
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: MODEL_LAB_DB_PATH
+        value: /app/data/model-lab.db
+      - key: MODEL_LAB_COOKIE_SECURE
+        value: 'true'
+      # Both must be provided in the dashboard; `sync: false` means "ask the
+      # operator, never invent a default".
+      - key: MODEL_LAB_ACCESS_TOKEN
+        sync: false
+      - key: MODEL_LAB_SECRET
+        sync: false

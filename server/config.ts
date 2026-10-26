@@ -31,6 +31,21 @@ const schema = z.object({
     .optional()
     .transform((value) => value === 'true' || value === '1'),
   PUBLIC_SITE_URL: z.string().default('http://127.0.0.1:5199'),
+
+  // --- access control -------------------------------------------------------
+  /** Shared password for the whole app. Empty means "no gate", which is only
+   *  allowed on a loopback bind or with MODEL_LAB_ALLOW_ANONYMOUS=true. */
+  MODEL_LAB_ACCESS_TOKEN: z.string().optional().default(''),
+  /** Explicit opt-out of the "refuse to start exposed and unauthenticated" check. */
+  MODEL_LAB_ALLOW_ANONYMOUS: z
+    .string()
+    .optional()
+    .transform((value) => value === 'true' || value === '1'),
+  /** Adds `Secure` to the session cookie. Set this whenever the app is served over TLS. */
+  MODEL_LAB_COOKIE_SECURE: z
+    .string()
+    .optional()
+    .transform((value) => value === 'true' || value === '1'),
 });
 
 const parsed = schema.safeParse(process.env);

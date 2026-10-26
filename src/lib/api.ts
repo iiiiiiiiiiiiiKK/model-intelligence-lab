@@ -7,6 +7,7 @@
  */
 import type {
   ApiErrorBody,
+  AuthStatus,
   Benchmark,
   BenchmarkItem,
   BenchmarkVersion,
@@ -148,6 +149,11 @@ const patch = <T,>(path: string, body: unknown) =>
 
 export const api = {
   health: () => get<HealthStatus>('/api/health'),
+
+  // --- auth ----------------------------------------------------------------
+  authStatus: () => get<AuthStatus>('/api/auth/status'),
+  login: (token: string) => post<{ authenticated: boolean }>('/api/auth/login', { token }),
+  logout: () => post<{ authenticated: boolean }>('/api/auth/logout', {}),
 
   overview: () =>
     get<{
@@ -460,6 +466,8 @@ export function errorMessage(error: ApiFailure): string {
       return 'state.errorForbidden';
     case 'NOT_FOUND':
       return 'state.errorNotFound';
+    case 'UNAUTHENTICATED':
+      return 'auth.required';
     default:
       return error.message || 'state.errorUnexpected';
   }

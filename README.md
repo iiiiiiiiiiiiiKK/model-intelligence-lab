@@ -6,7 +6,7 @@
 
 *Turn "the model got worse" into a testable claim.*
 
-[![tests](https://img.shields.io/badge/tests-270%20passing-brightgreen)](#测试)
+[![tests](https://img.shields.io/badge/tests-290%20passing-brightgreen)](#测试)
 [![e2e](https://img.shields.io/badge/e2e-70%20passing-brightgreen)](#测试)
 [![benchmark](https://img.shields.io/badge/benchmark-128%20items-blue)](#题库)
 [![catalog](https://img.shields.io/badge/models-132%20out%20of%20the%20box-8A2BE2)](#能评测哪些模型)
@@ -248,7 +248,7 @@ model-lab/
 │   └── routes/                  12 组 API
 ├── shared/                      前后端共享类型与聚合
 ├── src/                         React 客户端（11 个页面）
-├── tests/                       270 个单测 / API / 组件 / 引擎集成测试
+├── tests/                       290 个单测 / API / 组件 / 引擎集成测试
 ├── e2e/                         Playwright 测试（桌面 + 移动）
 └── scripts/                     构建、冒烟、全链路验证、截图、隔离验证
 ```
@@ -286,14 +286,29 @@ worker（进程内，重启后自动续跑）
 | 代码执行 | 故意不做；`unit-test` 题只做结构检查 |
 | 日志 | 密钥在写入日志前按模式脱敏 |
 
-**已知安全限制，直说**：没有身份认证。这是单租户、自托管的部署。谁能访问端口，谁就能读写数据。放到网络里之前，请先套一层带鉴权的反向代理。
+### 访问控制
+
+内置一个共享令牌闸门。设置 `MODEL_LAB_ACCESS_TOKEN` 后，除 `/api/health`、
+`/api/auth/*` 和单份公开报告之外的所有接口都返回 401，浏览器先显示登录页。
+
+- 令牌校验时**两侧都先做 HMAC 再比较**，长度也不泄漏
+- 登录失败每 IP 每 5 分钟限 10 次
+- 会话是 `到期时间.HMAC` 的签名 Cookie，签名密钥由主密钥派生：没有会话表，重启
+  不会把人踢下线；换主密钥会让所有会话立即失效
+- **只要 `HOST` 不是回环地址而没设令牌，进程会拒绝启动**并打印生成命令
+
+最后一条是故意的：一个暴露在公网的无认证实例，等于把加密的服务商密钥和一个花钱的
+入口一起交出去。
+
+它仍然只是**单租户**方案：一个共享密码，没有用户体系、没有按用户的数据隔离。需要
+多人分权时，仍需在外层加鉴权代理。
 
 ### 测试
 
 ```bash
 npm run typecheck     # 前端 + 服务端 + 测试
 npm run lint          # ESLint，零警告
-npm test              # 270 个测试
+npm test              # 290 个测试
 npm run test:e2e      # Playwright（桌面 + 移动）
 npm run verify        # 上面全跑 + 生产构建
 ```
@@ -301,11 +316,13 @@ npm run verify        # 上面全跑 + 生产构建
 额外的验证脚本：
 
 ```bash
-node scripts/api-smoke.mjs        # 39 条 HTTP 断言
-node scripts/verify-loop.mjs      # 本地 stub 供应商跑完整链路（38 项）
-node scripts/visual-check.mjs     # 设计令牌、对比度、减少动效（90 项）
-node scripts/verify-isolation.mjs # 第三方数据隔离证明
-node scripts/screenshots.mjs      # 重新生成 README 截图
+node scripts/api-smoke.mjs                # 39 条 HTTP 断言
+node scripts/verify-loop.mjs              # 本地 stub 供应商跑完整链路（38 项）
+node scripts/visual-check.mjs             # 设计令牌、对比度、减少动效（90 项）
+node scripts/verify-isolation.mjs         # 第三方数据隔离证明
+node scripts/verify-container-contract.mjs # 容器契约（39 项，无需 Docker）
+node scripts/check-auth-ui.mjs <token>    # 真实浏览器里验证登录闸门（7 项）
+node scripts/screenshots.mjs              # 重新生成 README 截图
 ```
 
 **没有 mock 模型调用**：集成测试和全链路验证会起一个真实的 HTTP 服务（说 chat-completions 协议），把适配器指过去，用真实 socket 和真实 SQLite 跑完重试、超时、取消、预算、评分、持久化和回归分析。但**没有调用任何付费厂商 API**——见下面的「项目状态」。
@@ -322,31 +339,46 @@ node scripts/screenshots.mjs      # 重新生成 README 截图
 | `tests/server/api.test.ts` | 39 |
 | `tests/server/providers.test.ts` | 22 |
 | `tests/server/catalog.test.ts` | 21 |
+| `tests/server/auth.test.ts` | 20 |
 | `tests/components/i18n.test.tsx` | 19 |
 | `tests/integration/engine.test.ts` | 8 |
-| **vitest 合计** | **270 通过** |
+| **vitest 合计** | **290 通过** |
 | Playwright 桌面 | 31 通过 |
 | Playwright 移动 | 39 通过 |
 
 ### 部署
 
-单进程即可：
+单进程即可，**必须先设置访问令牌**（否则非回环监听会拒绝启动）：
 
 ```bash
-npm ci
-npm run build
+export MODEL_LAB_ACCESS_TOKEN=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+npm ci && npm run build
 NODE_ENV=production PORT=8080 npm start
 ```
 
 数据库就是 `data/model-lab.db` 一个文件（用 `MODEL_LAB_DB_PATH` 改位置），挂个持久卷即可。
+
+三种方式都已经写好了配置，不需要自己拼：
+
+```bash
+# Docker / Compose
+cp .env.example .env      # 填 MODEL_LAB_ACCESS_TOKEN
+docker compose up -d
+
+# Fly.io
+fly launch --no-deploy --copy-config
+fly volumes create model_lab_data --size 1
+fly secrets set MODEL_LAB_ACCESS_TOKEN=... MODEL_LAB_SECRET=...
+fly deploy
+```
 
 **平台适用性**（这是实话，不是推销）：
 
 | 平台 | 能用吗 | 原因 |
 |---|---|---|
 | VPS / 自建 VM | ✅ 最佳 | 需要持久磁盘 + 常驻 worker |
-| Docker | ✅ | 挂载 `/app/data` 卷 |
-| Fly.io / Railway / Render | ✅ | 需要持久卷；必须单实例 |
+| Docker | ✅ 开箱可用 | 仓库自带 `Dockerfile` + `docker-compose.yml`，挂 `/app/data` 卷 |
+| Fly.io / Railway / Render | ✅ 开箱可用 | 仓库自带 `fly.toml` 与 `render.yaml`，均已固定持久卷 + 单实例 |
 | **GitHub Pages** | ❌ 应用跑不了<br>✅ 介绍页可以 | 纯静态托管，没有后端、没有 SQLite、没有后台任务。仓库已在该平台发布一个静态介绍页：[iiiiiiiiiiiiikk.github.io/model-intelligence-lab](https://iiiiiiiiiiiiikk.github.io/model-intelligence-lab/) |
 | Vercel / Netlify Functions | ⚠️ 需改造 | 文件系统是临时的，没有常驻 worker；要换成 Postgres + 外部队列 |
 | Cloudflare Workers | ❌ | 没有 `node:sqlite`，也没有长生命周期进程 |
@@ -355,7 +387,7 @@ NODE_ENV=production PORT=8080 npm start
 
 ### 已知限制
 
-- **没有身份认证** —— 最大的缺口。请置于带鉴权的反向代理之后
+- **只有共享令牌，没有用户体系** —— 单租户设计，一个人一个密码，没有按用户的隔离与审计
 - **只支持单实例 SQLite** —— 多实例需换 Postgres（`server/db/index.ts` 只有三个函数要替换）
 - **版本验证通常是 `unknown`** —— 多数厂商不对别名暴露可验证的快照 ID，所以无法承诺两次用的是同一份权重。每个模型页面都标了
 - **`unit-test` 题只做结构检查**，不执行代码
@@ -368,7 +400,7 @@ NODE_ENV=production PORT=8080 npm start
 
 | 里程碑 | 状态 | 证据 |
 |---|---|---|
-| 核心功能 | ✅ 完成 | 270 vitest + 70 Playwright |
+| 核心功能 | ✅ 完成 | 290 vitest + 70 Playwright |
 | 生产构建 | ✅ 完成 | `npm run build` → `dist/`，JS 约 210 kB gzip，强制 production React |
 | 生产模式自托管 | ✅ 已验证 | 全新数据库：SPA 根 200、深链 200、哈希资源 200、未知 API 404、开箱 132 模型 |
 | Git 仓库 | ✅ 完成 | 分支 `main`，工作区干净 |
@@ -465,7 +497,7 @@ The whole database is one SQLite file at `data/model-lab.db`. Needs a persistent
 
 | Milestone | State | Evidence |
 |---|---|---|
-| Core features | ✅ Done | 270 vitest + 70 Playwright |
+| Core features | ✅ Done | 290 vitest + 70 Playwright |
 | Production build | ✅ Done | `npm run build` → `dist/`, ~210 kB gzip JS, production React forced |
 | Production self-host | ✅ Verified | Fresh database: SPA root 200, deep link 200, hashed asset 200, unknown API 404, 132 models out of the box |
 | Public GitHub repo | ✅ Done | This repository |

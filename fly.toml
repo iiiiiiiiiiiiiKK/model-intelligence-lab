@@ -1,0 +1,50 @@
+# Fly.io deployment.
+#
+#   fly launch --no-deploy --copy-config
+#   fly volumes create model_lab_data --size 1
+#   fly secrets set MODEL_LAB_ACCESS_TOKEN="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+#   fly secrets set MODEL_LAB_SECRET="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+#   fly deploy
+#
+# Exactly one machine: the app owns a SQLite file and an in-process evaluation
+# worker. Two machines would mean two writers and two workers on the same data.
+
+app = 'model-intelligence-lab'
+primary_region = 'nrt'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[env]
+  NODE_ENV = 'production'
+  PORT = '8080'
+  HOST = '0.0.0.0'
+  MODEL_LAB_DB_PATH = '/app/data/model-lab.db'
+  MODEL_LAB_COOKIE_SECURE = 'true'
+
+[mounts]
+  source = 'model_lab_data'
+  destination = '/app/data'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false   # the background worker must keep running
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = 'requests'
+    soft_limit = 40
+    hard_limit = 80
+
+[[http_service.checks]]
+  graceful_period = '20s'
+  interval = '30s'
+  method = 'GET'
+  timeout = '5s'
+  path = '/api/health'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '512mb'

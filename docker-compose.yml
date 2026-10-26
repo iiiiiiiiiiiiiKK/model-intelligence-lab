@@ -1,0 +1,46 @@
+# Compose file for self-hosting on a single machine.
+#
+#   cp .env.example .env
+#   # put a random MODEL_LAB_ACCESS_TOKEN in .env — the app refuses to start
+#   # exposed without one
+#   docker compose up -d
+#
+# Then open http://127.0.0.1:8080 and sign in with that token.
+
+services:
+  model-lab:
+    build: .
+    image: model-intelligence-lab:local
+    container_name: model-lab
+    restart: unless-stopped
+    ports:
+      # Bound to loopback on purpose. Put a TLS-terminating proxy with its own
+      # auth in front before exposing this on a public interface.
+      - '127.0.0.1:8080:8080'
+    environment:
+      NODE_ENV: production
+      # Required unless you set MODEL_LAB_ALLOW_ANONYMOUS=true behind your own proxy.
+      MODEL_LAB_ACCESS_TOKEN: ${MODEL_LAB_ACCESS_TOKEN:?set MODEL_LAB_ACCESS_TOKEN in .env}
+      MODEL_LAB_COOKIE_SECURE: ${MODEL_LAB_COOKIE_SECURE:-false}
+      # Optional headless provider configuration; the in-app Settings screen is
+      # the primary path and always wins over these values.
+      OPENAI_COMPATIBLE_BASE_URL: ${OPENAI_COMPATIBLE_BASE_URL:-}
+      OPENAI_COMPATIBLE_API_KEY: ${OPENAI_COMPATIBLE_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      # Stable master key so a container rebuild can still decrypt stored keys.
+      MODEL_LAB_SECRET: ${MODEL_LAB_SECRET:-}
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-http://127.0.0.1:8080}
+    volumes:
+      # One file plus the generated master key. Back this up together, or the
+      # encrypted provider keys become unreadable.
+      - model-lab-data:/app/data
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:8080/api/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  model-lab-data:

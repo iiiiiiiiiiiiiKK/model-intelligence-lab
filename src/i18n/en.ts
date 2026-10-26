@@ -325,6 +325,20 @@ export const en: Record<keyof typeof zh, string> = {
   'conclusion.insufficient-data': 'Insufficient data',
   'conclusion.execution-failed': 'Execution failed',
 
+  // auth
+  'auth.title': 'Access token required',
+  'auth.intro': 'This instance is protected by an access token. It is a single-tenant, self-hosted deployment: whoever gets in can read and write all data and the encrypted provider keys, so the door stays shut.',
+  'auth.tokenLabel': 'Access token',
+  'auth.tokenPlaceholder': 'Paste the MODEL_LAB_ACCESS_TOKEN set at deploy time',
+  'auth.signIn': 'Enter',
+  'auth.signingIn': 'Verifying…',
+  'auth.signOut': 'Sign out',
+  'auth.wrongToken': 'That token is not correct.',
+  'auth.required': 'A valid access token is required to continue.',
+  'auth.cannotReach': 'Cannot reach the backend',
+  'auth.hint': 'The token is compared in constant time and never logged. Sessions are a signed cookie, so restarting the server does not sign you out.',
+
+  // benchmarks
   'benchmarks.title': 'Benchmarks',
   'benchmarks.subtitle': 'Datasets, versions, scoring rules, sourcing and licensing.',
   'benchmarks.list': 'Datasets',

@@ -374,6 +374,16 @@ export interface HealthStatus {
   version: string;
   uptimeSeconds: number;
   demoDataPresent: boolean;
+  /** True when the instance is behind an access token. */
+  authRequired?: boolean;
+}
+
+/** Combined answer from `GET /api/auth/status`. */
+export interface AuthStatus {
+  /** Whether a token is configured at all, i.e. whether the gate is active. */
+  required: boolean;
+  /** Whether this browser already holds a valid session. */
+  authenticated: boolean;
 }
 
 export interface CompareEntry {

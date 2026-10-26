@@ -37,29 +37,94 @@ answer, not an error.
 
 ## 2. Docker
 
-```dockerfile
-FROM node:22-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build && npm run db:seed -- --no-demo
-ENV NODE_ENV=production PORT=8080 MODEL_LAB_DB_PATH=/app/data/model-lab.db
-EXPOSE 8080
-CMD ["npm", "start"]
-```
+A working `Dockerfile` is committed, so there is nothing to write by hand:
 
 ```bash
 docker build -t model-lab .
+
 docker run -d --name model-lab \
-  -p 8080:8080 \
+  -p 127.0.0.1:8080:8080 \
   -v model-lab-data:/app/data \
-  --env-file .env \
+  -e MODEL_LAB_ACCESS_TOKEN="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")" \
+  -e MODEL_LAB_SECRET="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")" \
   model-lab
 ```
 
+Or with Compose, which reads both secrets from `.env`:
+
+```bash
+cp .env.example .env
+# put a MODEL_LAB_ACCESS_TOKEN in .env, then:
+docker compose up -d
+```
+
+The committed image is a two-stage build: the builder compiles the client, the
+runtime carries only `node_modules` + `dist/` + the server sources and runs as the
+unprivileged `node` user under `tini`, so `SIGTERM` reaches the evaluation worker
+instead of killing it mid-run.
+
 The volume at `/app/data` is the entire database — back it up, and never run two
 containers against the same file.
+
+`node scripts/verify-container-contract.mjs` checks what can be verified without a
+Docker daemon: that every `COPY` source exists, that `.dockerignore` does not
+exclude a needed path, that `.env` and `data/` are excluded, that the runtime
+command resolves, and that the exposure guard is wired.
+
+### Fly.io
+
+`fly.toml` is committed with a single machine, a mounted volume and
+`auto_stop_machines = false` (the worker must not be frozen):
+
+```bash
+fly launch --no-deploy --copy-config
+fly volumes create model_lab_data --size 1
+fly secrets set MODEL_LAB_ACCESS_TOKEN="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+fly secrets set MODEL_LAB_SECRET="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+fly deploy
+```
+
+### Render
+
+`render.yaml` is a blueprint with a persistent disk and `numInstances: 1`. Point
+Render at the repository and fill in the two `sync: false` secrets in the
+dashboard.
+
+---
+
+## 2b. Access control
+
+The app has a built-in access gate, and it is **on by default whenever the bind
+address is not loopback**:
+
+```bash
+MODEL_LAB_ACCESS_TOKEN=<a long random string>
+```
+
+With it set, every API route except `/api/health`, `/api/auth/*` and reads of an
+individual shared report returns `401 UNAUTHENTICATED`, and the browser shows a
+sign-in screen before any data is fetched. The token is compared in constant time
+(both sides are hashed first, so length does not leak either), and sign-in attempts
+are limited to 10 per IP per 5 minutes.
+
+Sessions are a signed cookie — `expiry.HMAC` — where the HMAC key is derived from
+the credential master key. There is no session table, so a restart does not sign
+anyone out, and rotating `MODEL_LAB_SECRET` (or deleting `data/.master-key`)
+invalidates every session at once.
+
+If `HOST` is not loopback and no token is set, `bootstrap()` **refuses to start**
+and prints the command to generate one. That check exists because an exposed
+instance hands out encrypted provider keys and a way to spend your budget.
+
+`MODEL_LAB_ALLOW_ANONYMOUS=true` skips that check, for the case where a trusted
+reverse proxy already authenticates. Set `MODEL_LAB_COOKIE_SECURE=true` when
+serving over HTTPS so the cookie carries `Secure`.
+
+Verify the gate end to end against a running instance:
+
+```bash
+node scripts/check-auth-ui.mjs <your-token>
+```
 
 ---
 
@@ -160,18 +225,24 @@ check for outbound provider calls.
 
 ## 5. Hardening checklist before public exposure
 
-The app ships **without authentication**. Do these first:
+The app has a built-in access token gate, but defence in depth still applies.
 
-1. Terminate TLS at a reverse proxy and require your own auth (basic auth, OAuth
-   proxy, VPN). Do not expose port 8790 directly.
-2. Set `ALLOWED_PROVIDER_HOSTS` to your exact provider hostnames.
-3. Leave `ALLOW_LOOPBACK_PROVIDER` unset in production.
-4. Lower `RATE_LIMIT_MAX_REQUESTS` to what your traffic justifies.
-5. Set `ADMIN_TOKEN` if you want community moderation enabled; without it the
+1. **Set `MODEL_LAB_ACCESS_TOKEN`.** It is mandatory when `HOST` is not loopback —
+   the process refuses to start without it. Generate one with
+   `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
+2. Terminate TLS at a reverse proxy and set `MODEL_LAB_COOKIE_SECURE=true`, or the
+   session cookie would travel in clear text.
+3. Optionally keep your own auth in front too (basic auth, OAuth proxy, VPN) and
+   set `MODEL_LAB_ALLOW_ANONYMOUS=true` only if that proxy is the sole entry point.
+4. Set `ALLOWED_PROVIDER_HOSTS` to your exact provider hostnames.
+5. Leave `ALLOW_LOOPBACK_PROVIDER` unset in production.
+6. Lower `RATE_LIMIT_MAX_REQUESTS` to what your traffic justifies.
+7. Set `ADMIN_TOKEN` if you want community moderation enabled; without it the
    review endpoint refuses every request.
-6. Keep `data/model-lab.db` out of any web-served directory (the default already
+8. Keep `data/model-lab.db` out of any web-served directory (the default already
    is outside `dist/`).
-7. Back up the database file on a schedule.
+9. Back up the database file **and** `data/.master-key` together on a schedule —
+   one without the other is useless.
 
 Example nginx front end:
 

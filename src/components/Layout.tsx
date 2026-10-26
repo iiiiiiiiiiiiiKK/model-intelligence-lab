@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { SignOutButton } from './AuthGate';
 import {
   Activity,
   BarChart3,
@@ -190,6 +191,7 @@ export default function Layout() {
 
         <div className={`border-t border-lab-border p-2 ${collapsed ? 'space-y-2' : 'space-y-2.5'}`}>
           {!collapsed ? <LanguageSwitch /> : <LanguageSwitch compact />}
+          {!collapsed ? <SignOutButton show={health?.authRequired === true} /> : null}
           <div className={collapsed ? 'flex justify-center' : 'flex items-center justify-between px-1'}>
             <HealthDot health={health} />
             <button
@@ -277,8 +279,9 @@ export default function Layout() {
               </nav>
               <div className="border-t border-lab-border p-3">
                 <LanguageSwitch />
-                <div className="mt-2.5">
+                <div className="mt-2.5 space-y-1.5">
                   <HealthDot health={health} />
+                  <SignOutButton show={health?.authRequired === true} />
                 </div>
               </div>
             </div>
