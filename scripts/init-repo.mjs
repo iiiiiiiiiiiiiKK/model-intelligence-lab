@@ -127,8 +127,11 @@ Testing
 - Verification scripts: api smoke, full-loop against a stub provider,
   runtime visual/design assertions`,
   author: {
-    name: 'Model Intelligence Lab',
-    email: 'noreply@example.invalid',
+    // The repository owner's GitHub identity. GitHub links a commit to a profile
+    // only when the author email is on that account, so the noreply form is used
+    // rather than a placeholder that resolves to nobody.
+    name: process.env.GIT_AUTHOR_NAME || 'KK-Trade',
+    email: process.env.GIT_AUTHOR_EMAIL || '132676579+iiiiiiiiiiiiiKK@users.noreply.github.com',
   },
 });
 
