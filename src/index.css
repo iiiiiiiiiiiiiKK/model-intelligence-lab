@@ -1,0 +1,235 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+   Design tokens — deep forest green × fluorescent lime × precision data viz
+   --------------------------------------------------------------------------- */
+:root {
+  --bg-page: #071b12;
+  --bg-surface: #0b1d13;
+  --bg-raised: #102b1b;
+  --bg-card: #142d1c;
+  --bg-hover: #193822;
+  --border-subtle: #29432b;
+  --border-strong: #3a5a3d;
+
+  --accent: #b5e94b;
+  --accent-dim: #8fbe33;
+  --accent-soft: rgba(181, 233, 75, 0.12);
+  --cyan: #5ddbca;
+  --cyan-soft: rgba(93, 219, 202, 0.12);
+  --warn: #f3b66d;
+  --warn-soft: rgba(243, 182, 109, 0.12);
+  --danger: #ff7474;
+  --danger-soft: rgba(255, 116, 116, 0.12);
+  --demo: #c79bf2;
+  --demo-soft: rgba(199, 155, 242, 0.12);
+
+  --text: #e8f0e5;
+  --text-muted: #a4b9a2;
+  --text-faint: #6e856d;
+
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-lg: 10px;
+
+  --font-sans: 'Inter', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
+    system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+
+  color-scheme: dark;
+}
+
+* {
+  border-color: var(--border-subtle);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-page);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* A restrained ambient wash: two soft radial hints, no glassmorphism. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 420px at 12% -10%, rgba(181, 233, 75, 0.055), transparent 70%),
+    radial-gradient(700px 380px at 92% 4%, rgba(93, 219, 202, 0.045), transparent 72%);
+  z-index: 0;
+}
+
+::selection {
+  background: rgba(181, 233, 75, 0.28);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2c4a30 transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #2c4a30;
+  border-radius: 6px;
+  border: 2px solid var(--bg-page);
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@layer components {
+  .lab-card {
+    @apply rounded-lab border border-lab-border bg-lab-card;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  }
+
+  .lab-panel {
+    @apply rounded-lab border border-lab-border bg-lab-raised;
+  }
+
+  .lab-label {
+    @apply text-2xs font-medium uppercase tracking-wider text-lab-faint;
+  }
+
+  .lab-input {
+    @apply w-full rounded-lab border border-lab-border bg-lab-surface px-3 py-2 text-sm text-lab-text
+      placeholder:text-lab-faint transition-colors duration-fast;
+  }
+  .lab-input:hover {
+    border-color: var(--border-strong);
+  }
+  .lab-input:focus {
+    outline: none;
+    border-color: var(--accent-dim);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .lab-input:disabled {
+    @apply cursor-not-allowed opacity-60;
+  }
+
+  .lab-btn {
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-lab border px-3 py-2
+      text-sm font-medium transition-colors duration-fast disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .lab-btn-primary {
+    @apply lab-btn border-transparent;
+    background: var(--accent);
+    color: #0a1a0e;
+  }
+  .lab-btn-primary:hover:not(:disabled) {
+    background: #c6f467;
+  }
+  .lab-btn-secondary {
+    @apply lab-btn border-lab-border bg-lab-card text-lab-text;
+  }
+  .lab-btn-secondary:hover:not(:disabled) {
+    background: var(--bg-hover);
+    border-color: var(--border-strong);
+  }
+  .lab-btn-ghost {
+    @apply lab-btn border-transparent bg-transparent text-lab-muted;
+  }
+  .lab-btn-ghost:hover:not(:disabled) {
+    background: var(--bg-hover);
+    color: var(--text);
+  }
+  .lab-btn-danger {
+    @apply lab-btn;
+    border-color: rgba(255, 116, 116, 0.4);
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+  .lab-btn-danger:hover:not(:disabled) {
+    background: rgba(255, 116, 116, 0.2);
+  }
+
+  .lab-link {
+    @apply text-lab-accent underline-offset-2 hover:underline;
+  }
+
+  .lab-table {
+    @apply w-full border-collapse text-sm;
+  }
+  .lab-table thead th {
+    @apply sticky top-0 z-10 whitespace-nowrap border-b border-lab-border bg-lab-raised px-3 py-2
+      text-left text-2xs font-medium uppercase tracking-wider text-lab-faint;
+  }
+  .lab-table tbody td {
+    @apply border-b border-lab-border/60 px-3 py-2.5 align-top text-lab-text;
+  }
+  .lab-table tbody tr:hover {
+    background: rgba(25, 56, 34, 0.55);
+  }
+
+  .lab-scroll {
+    @apply overflow-x-auto;
+  }
+}
+
+/* Non-essential motion is opt-out. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Screen-reader-only utility (no Tailwind plugin needed). */
+.sr-only-focusable:not(:focus):not(:focus-within) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.recharts-cartesian-axis-tick text {
+  fill: var(--text-faint);
+  font-size: 11px;
+}
+.recharts-cartesian-grid line {
+  stroke: rgba(41, 67, 43, 0.55);
+}
+.recharts-default-tooltip {
+  background: var(--bg-raised) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 6px !important;
+}
+.recharts-tooltip-label {
+  color: var(--text) !important;
+  font-weight: 600;
+}

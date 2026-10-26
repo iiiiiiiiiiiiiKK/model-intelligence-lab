@@ -1,0 +1,46 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+dist-server/
+*.tsbuildinfo
+
+# secrets and local configuration — never commit these
+.env
+.env.*
+!.env.example
+
+# local database and generated data
+data/*.db
+# credential master key — NEVER commit this. Losing control of it means every
+# stored provider API key can be decrypted.
+data/.master-key
+*.master-key
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+data/exports/
+
+# test and build artefacts
+coverage/
+artifacts/
+playwright-report/
+test-results/
+.vite/
+.tmp/
+*.local
+
+# logs
+*.log
+npm-debug.log*
+yarn-error.log*
+logs/
+
+# editors and OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

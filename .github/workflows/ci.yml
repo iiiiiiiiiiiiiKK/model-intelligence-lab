@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: typecheck · lint · test · build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit, API and integration tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+      - name: Verify the build serves the app
+        run: |
+          NODE_ENV=production PORT=8790 MODEL_LAB_DB_PATH="$RUNNER_TEMP/ci.db" node --import tsx server/index.ts &
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8790/api/health > /dev/null; then break; fi
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:8790/api/health
+          curl -sf http://127.0.0.1:8790/ > /dev/null
+          curl -sf http://127.0.0.1:8790/catalog > /dev/null
+          echo "server ok"
