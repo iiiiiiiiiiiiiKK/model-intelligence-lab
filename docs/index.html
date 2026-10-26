@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Model Intelligence Lab · 可复现的大模型评测与退化检测</title>
+<meta name="description" content="在固定题库上重复评测同一个模型，用配对统计检验判断能力变化是否真实。可复现、可追踪、可比较。" />
+<meta property="og:title" content="Model Intelligence Lab" />
+<meta property="og:description" content="Turn &quot;the model got worse&quot; into a testable claim." />
+<meta property="og:image" content="screenshots/home-zh.png" />
+<meta name="theme-color" content="#071B12" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230B1D13'/%3E%3Cpath d='M10 22V13l4 5 4-5v9' fill='none' stroke='%23B5E94B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='22' cy='20.5' r='1.6' fill='%235DDBCA'/%3E%3C/svg%3E" />
+<style>
+  :root {
+    --bg: #071B12;
+    --surface: #0B1D13;
+    --raised: #102B1B;
+    --card: #142D1C;
+    --border: #29432B;
+    --accent: #B5E94B;
+    --cyan: #5DDBCA;
+    --text: #E8F0E5;
+    --muted: #A4B9A2;
+    --faint: #6E856D;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Inter", "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(900px 420px at 12% -10%, rgba(181,233,75,.06), transparent 70%),
+      radial-gradient(700px 380px at 92% 4%, rgba(93,219,202,.05), transparent 72%);
+    z-index: 0;
+  }
+  .wrap { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  h1, h2, h3 { line-height: 1.25; letter-spacing: -0.01em; }
+  h1 { font-size: clamp(2rem, 5vw, 3rem); margin: 0 0 16px; }
+  h2 { font-size: 1.5rem; margin: 0 0 8px; }
+  h3 { font-size: 1.05rem; margin: 0 0 6px; }
+  p { color: var(--muted); margin: 0 0 14px; }
+  code, .mono { font-family: "JetBrains Mono", Consolas, monospace; font-size: .875em; }
+  code { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; color: var(--text); }
+
+  header.hero { padding: 72px 0 40px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+  .badge {
+    font-size: .72rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+    border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; color: var(--muted);
+    background: var(--raised);
+  }
+  .badge.accent { color: var(--accent); border-color: rgba(181,233,75,.4); background: rgba(181,233,75,.09); }
+  .badge.cyan { color: var(--cyan); border-color: rgba(93,219,202,.4); background: rgba(93,219,202,.09); }
+  .lead { font-size: 1.15rem; color: var(--muted); max-width: 62ch; }
+
+  .notice {
+    display: flex; gap: 12px; align-items: flex-start;
+    border: 1px solid rgba(243,182,109,.35); background: rgba(243,182,109,.07);
+    border-radius: 6px; padding: 14px 16px; margin: 28px 0;
+  }
+  .notice strong { color: #F3B66D; }
+  .notice p { margin: 0; font-size: .9rem; }
+
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0 0; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 18px; border-radius: 6px; font-weight: 600; font-size: .92rem;
+    border: 1px solid var(--border); background: var(--card); color: var(--text);
+    transition: background .12s ease, border-color .12s ease;
+  }
+  .btn:hover { background: #193822; border-color: #3A5A3D; text-decoration: none; }
+  .btn.primary { background: var(--accent); border-color: transparent; color: #0A1A0E; }
+  .btn.primary:hover { background: #C6F467; }
+
+  section { padding: 44px 0; border-top: 1px solid var(--border); }
+  .grid { display: grid; gap: 16px; }
+  .grid.two { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .grid.three { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+    padding: 18px; box-shadow: inset 0 1px 0 rgba(255,255,255,.02);
+  }
+  .card p { margin: 0; font-size: .9rem; }
+  .card .k { font-family: "JetBrains Mono", Consolas, monospace; color: var(--accent); font-size: 1.5rem; display: block; margin-bottom: 4px; }
+  .card .lbl { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); }
+
+  figure { margin: 0; }
+  figure img {
+    width: 100%; display: block; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--surface);
+  }
+  figcaption { font-size: .8rem; color: var(--faint); margin-top: 8px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); font-weight: 600; }
+  td { color: var(--muted); }
+  td:first-child { color: var(--text); }
+  .yes { color: var(--accent); font-weight: 600; }
+  .no { color: #FF7474; font-weight: 600; }
+  .warn { color: #F3B66D; font-weight: 600; }
+
+  pre {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    padding: 14px 16px; overflow-x: auto; font-size: .85rem; color: var(--text); margin: 0 0 14px;
+  }
+  pre code { background: none; border: 0; padding: 0; }
+
+  footer { padding: 40px 0 64px; border-top: 1px solid var(--border); }
+  footer p { font-size: .85rem; color: var(--faint); margin: 0 0 6px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="badges">
+      <span class="badge accent">270 tests passing</span>
+      <span class="badge">128 benchmark items</span>
+      <span class="badge cyan">132 models</span>
+      <span class="badge">MIT + CC-BY-4.0</span>
+    </div>
+    <h1>Model Intelligence Lab</h1>
+    <p class="lead">
+      可复现的大模型评测、能力追踪与退化检测。<br />
+      在固定的题库上把同一个模型跑两次，它告诉你这次差异<strong style="color:var(--text)">到底是不是真的</strong>——用配对统计检验，而不是凭感觉。
+    </p>
+
+    <div class="notice">
+      <span aria-hidden="true">⚠</span>
+      <p>
+        <strong>这一页只是静态介绍，不是应用本身。</strong>
+        应用需要 Node.js 服务端、SQLite 数据库和常驻后台任务，GitHub Pages 这类静态托管无法运行它。
+        要真正使用，请在本地或服务器上按下面的命令启动，或参考仓库里的部署文档。
+      </p>
+    </div>
+
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/iiiiiiiiiiiiiKK/model-intelligence-lab">查看源码与完整文档</a>
+      <a class="btn" href="https://github.com/iiiiiiiiiiiiiKK/model-intelligence-lab#30-秒跑起来">本地启动步骤</a>
+      <a class="btn" href="https://x.com/0xkillcoin">X / Twitter</a>
+    </div>
+  </header>
+
+  <section>
+    <h2>它回答什么问题</h2>
+    <div class="grid two">
+      <div class="card"><h3>同一个模型，最近变差了吗？</h3><p>相同题库、相同参数、两次运行，逐题配对 + McNemar 精确检验，给出样本量、置信区间和判定方法。</p></div>
+      <div class="card"><h3>哪个模型更适合我的任务？</h3><p>六个维度分别计分：推理、编程、指令遵循、事实准确性、稳定性、行为交互。不做单一总分排名。</p></div>
+      <div class="card"><h3>换了参数/升级了版本，实际差多少？</h3><p>参数或题库版本不一致时，结论直接降级为「不可直接比较」并列出具体原因，而不是硬算一个差值。</p></div>
+      <div class="card"><h3>这个结论能复现吗？</h3><p>每题保存原始回答、评分依据、评分器版本、延迟和 token 用量。报告可导出、可分享。</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>七种结论，各自什么意思</h2>
+    <table>
+      <thead><tr><th>结论</th><th>含义</th></tr></thead>
+      <tbody>
+        <tr><td class="no">检测到显著退化</td><td>配对检验在 α 水平上拒绝了「没有变化」</td></tr>
+        <tr><td class="yes">检测到显著提升</td><td>同上，方向相反</td></tr>
+        <tr><td>未发现显著变化</td><td><strong>没有</strong>发现变化的证据 —— 不等于证明稳定</td></tr>
+        <tr><td class="warn">结果不确定</td><td>有数据，但检验无法把信号从噪声里分出来</td></tr>
+        <tr><td class="warn">不可直接比较</td><td>题库版本、提示词或参数不一致</td></tr>
+        <tr><td>数据不足</td><td>该维度配对的题目少于 4 道</td></tr>
+        <tr><td class="no">执行失败</td><td>模型调用失败，这不是能力信号</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:14px;font-size:.88rem">
+      工具不会指控厂商偷偷降级。它只报告<strong style="color:var(--text)">在记录条件下的可观察行为</strong>。
+    </p>
+  </section>
+
+  <section>
+    <h2>界面</h2>
+    <div class="grid two">
+      <figure>
+        <img src="screenshots/home-zh.png" alt="首页" loading="lazy" />
+        <figcaption>首页 — 真实评测次数、能力趋势、近期变化事件</figcaption>
+      </figure>
+      <figure>
+        <img src="screenshots/lab-zh.png" alt="评测实验室" loading="lazy" />
+        <figcaption>评测实验室 — 选题集、配参数、看预算、追踪进度</figcaption>
+      </figure>
+      <figure>
+        <img src="screenshots/monitor-zh.png" alt="退化监测" loading="lazy" />
+        <figcaption>退化监测 — 配对计数、置信区间、Holm 校正</figcaption>
+      </figure>
+      <figure>
+        <img src="screenshots/catalog-zh.png" alt="参考模型库" loading="lazy" />
+        <figcaption>参考模型库 — 132 个模型、24 家厂商、真实挂牌价</figcaption>
+      </figure>
+      <figure>
+        <img src="screenshots/benchmarks-zh.png" alt="题库" loading="lazy" />
+        <figcaption>题库 — 128 道题、六个维度、确定性评分器</figcaption>
+      </figure>
+      <figure>
+        <img src="screenshots/settings-zh.png" alt="设置" loading="lazy" />
+        <figcaption>设置 — 界面里加服务商和密钥，AES-256-GCM 加密存储</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>两类数字，从不混合</h2>
+    <p>
+      除了你自己跑的评测，应用还会展示第三方公开分数（Arena 盲测 Elo、Artificial Analysis 指数），
+      让你在不花自己 API 额度的情况下先做选型。但它们被严格隔离：
+    </p>
+    <table>
+      <thead><tr><th></th><th>本项目评测</th><th>第三方参考</th></tr></thead>
+      <tbody>
+        <tr><td>谁跑的</td><td>你的 key，这个引擎</td><td>OpenRouter 目录转发布的第三方数据</td></tr>
+        <tr><td>本仓库可复现</td><td class="yes">✅</td><td class="no">❌</td></tr>
+        <tr><td>参与总分</td><td class="yes">✅</td><td class="no">永不</td></tr>
+        <tr><td>参与退化检测</td><td class="yes">✅</td><td class="no">永不</td></tr>
+        <tr><td>展示方式</td><td>附原始回答</td><td>附来源与数据日期</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:14px">
+      这不是约定，是结构保证 —— 评测表里根本没有能承载第三方值的列。仓库里有
+      <code>scripts/verify-isolation.mjs</code> 可以自己验证。
+    </p>
+  </section>
+
+  <section>
+    <h2>本地启动</h2>
+    <p>只需要 Node.js ≥ 22.5（内置 <code>node:sqlite</code>）。不需要数据库服务、不需要 Docker、不需要云账号。</p>
+    <pre><code>git clone https://github.com/iiiiiiiiiiiiiKK/model-intelligence-lab.git
+cd model-intelligence-lab
+npm install
+npm run db:seed      # 建表 + 模型注册表 + 示例数据
+npm run dev          # API :8790 + 前端 :5199</code></pre>
+    <p>
+      打开 <code>http://127.0.0.1:5199</code>，进 <strong style="color:var(--text)">设置 → 服务商 → 添加服务商</strong>，
+      填入接口地址（以 <code>/v1</code> 结尾）和密钥，点「测试连接」会真实请求一次并回显对方提供的模型列表。
+      不需要重启，不需要编辑任何文件。
+    </p>
+  </section>
+
+  <section>
+    <h2>部署：为什么不能用 GitHub Pages</h2>
+    <table>
+      <thead><tr><th>平台</th><th>能用吗</th><th>原因</th></tr></thead>
+      <tbody>
+        <tr><td>VPS / 自建 VM</td><td class="yes">✅ 最佳</td><td>需要持久磁盘 + 常驻 worker</td></tr>
+        <tr><td>Docker</td><td class="yes">✅</td><td>挂载一个数据卷即可</td></tr>
+        <tr><td>Fly.io / Railway / Render</td><td class="yes">✅</td><td>需要持久卷，且必须是单实例</td></tr>
+        <tr><td><strong>GitHub Pages</strong></td><td class="no">❌</td><td>纯静态托管，没有后端、没有 SQLite、没有后台任务。这一页就是它能承载的全部内容。</td></tr>
+        <tr><td>Vercel / Netlify Functions</td><td class="warn">⚠ 需改造</td><td>文件系统是临时的，没有常驻 worker；要换成 Postgres + 外部队列</td></tr>
+        <tr><td>Cloudflare Workers</td><td class="no">❌</td><td>没有 <code>node:sqlite</code>，也没有长生命周期进程</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer>
+    <p>Model Intelligence Lab · 代码 MIT，题库 CC-BY-4.0</p>
+    <p>Built and maintained by <a href="https://x.com/0xkillcoin">@0xkillcoin</a></p>
+    <p><em>Reports what it can observe. Admits what it cannot.</em></p>
+  </footer>
+
+</div>
+</body>
+</html>
